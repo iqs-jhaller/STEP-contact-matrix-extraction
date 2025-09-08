@@ -1,0 +1,2 @@
+# This file ensures the step_files directory is kept in version control
+# STEP files in this folder are input files and should be tracked in git
