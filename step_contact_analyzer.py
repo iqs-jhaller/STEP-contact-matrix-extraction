@@ -21,6 +21,7 @@ from OCC.Core.Bnd import Bnd_Box
 from OCC.Core.BRepBndLib import brepbndlib_Add
 from OCC.Core.TopoDS import TopoDS_Shape, TopoDS_Solid
 from OCC.Core.BRep import BRep_Tool
+import re
 
 
 class STEPContactAnalyzer:
@@ -43,6 +44,41 @@ class STEPContactAnalyzer:
         # Setup logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+    
+    def _extract_part_names_from_step_text(self, file_path: str) -> List[str]:
+        """
+        Extract part names from STEP file using text parsing
+        
+        Args:
+            file_path: Path to the STEP file
+            
+        Returns:
+            List of part names found in the file
+        """
+        part_names = []
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+                
+            # Look for PRODUCT entities which contain part names
+            # Pattern: PRODUCT('name',...)
+            product_pattern = r"PRODUCT\s*\(\s*'([^']+)'"
+            matches = re.findall(product_pattern, content, re.IGNORECASE)
+            
+            # Filter out generic names and add meaningful ones
+            for name in matches:
+                if (name and len(name) > 0 and 
+                    name.lower() not in ['', 'untitled', 'default', 'assembly']):
+                    if name not in part_names:  # Avoid duplicates
+                        part_names.append(name)
+            
+            self.logger.debug(f"Extracted {len(part_names)} names from STEP file: {part_names}")
+            
+        except Exception as e:
+            self.logger.debug(f"Name extraction failed: {e}")
+        
+        return part_names
     
     def load_step_file(self, file_path: str) -> bool:
         """
@@ -67,6 +103,9 @@ class STEPContactAnalyzer:
             step_reader.TransferRoots()
             shape = step_reader.OneShape()
             
+            # Extract part names from STEP file text
+            extracted_names = self._extract_part_names_from_step_text(file_path)
+            
             # Extract all solid parts
             self.parts = []
             self.part_names = []
@@ -77,11 +116,23 @@ class STEPContactAnalyzer:
             while explorer.More():
                 solid = explorer.Current()
                 self.parts.append(solid)
-                self.part_names.append(f"Part_{part_index}")
+                
+                # Use extracted name if available, otherwise use generic name
+                if part_index < len(extracted_names):
+                    part_name = extracted_names[part_index]
+                else:
+                    part_name = f"Part_{part_index}"
+                
+                self.part_names.append(part_name)
                 part_index += 1
                 explorer.Next()
             
             self.logger.info(f"Loaded {len(self.parts)} parts from {file_path}")
+            
+            # Log the part names
+            if self.part_names:
+                self.logger.info(f"Part names: {', '.join(self.part_names)}")
+            
             return True
             
         except Exception as e:
