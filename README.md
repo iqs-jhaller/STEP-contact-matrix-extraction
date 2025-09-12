@@ -2,17 +2,6 @@
 
 A Python application that analyzes STEP (Standard for the Exchange of Product Data) files to create contact matrices showing which parts touch or are connected to each other, and visualizes the results as interactive graphs using NetworkX.
 
-## Features
-
-- **STEP File Loading**: Parse and load 3D CAD models from STEP files
-- **Contact Detection**: Automatically detect which parts are in contact based on geometric proximity
-- **Contact Matrix Generation**: Create binary matrices representing part-to-part contacts
-- **Graph Visualization**: Convert contact relationships into NetworkX graphs with customizable layouts
-- **Analysis Tools**: Compute centrality measures, find critical connections, and analyze assembly structure
-- **Export/Import**: Save contact matrices to CSV files for further analysis
-- **Simple Organization**: Clean folder structure with inputs and results separated
-- **Easy Usage**: Simple command-line interface for direct file analysis
-
 ## Installation
 
 ### Prerequisites
@@ -57,6 +46,7 @@ step-contact-matrix/
 ├── config.py                   # Configuration settings
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # Documentation
+├── LICENSE                     # MIT License
 ├── .gitignore                  # Git ignore rules
 ├── step_files/                 # Input STEP files
 │   └── knife.step              # Example knife assembly
@@ -67,7 +57,8 @@ step-contact-matrix/
 
 **Key Principles:**
 - **step_files/**: Input folder for STEP files (tracked in git)
-- **results/**: Output folder for all generated files (ignored by git)
+- **results/**: Output folder for all generated files (ignored by git)  
+- **publication/**: Academic diagrams and documentation (ignored by git)
 - **Clean Separation**: Inputs and outputs are clearly separated
 - **Simple Structure**: No complex nested folders or management systems
 
@@ -91,36 +82,6 @@ python main.py test
 python main.py help
 ```
 
-### Basic Programmatic Usage
-
-```python
-from step_contact_analyzer import STEPContactAnalyzer
-
-# Initialize analyzer
-analyzer = STEPContactAnalyzer(tolerance=1e-3)
-
-# Load STEP file
-if analyzer.load_step_file("your_assembly.step"):
-    # Compute contact matrix
-    contact_matrix = analyzer.compute_contact_matrix()
-    
-    # Visualize as graph
-    analyzer.visualize_contact_graph(save_path="contact_graph.png")
-    
-    # Print summary
-    analyzer.print_contact_summary()
-```
-
-### Running Tests
-
-The application includes a comprehensive test suite:
-
-```bash
-python main.py test
-```
-
-This will test all core functionality using the included knife.step file.
-
 ## Core Classes and Functions
 
 ### STEPContactAnalyzer
@@ -128,11 +89,16 @@ This will test all core functionality using the included knife.step file.
 Main class for analyzing STEP files and computing contact matrices.
 
 **Key Methods:**
-- `load_step_file(file_path)`: Load and parse a STEP file
+- `load_step_file(file_path)`: Load and parse a STEP file, extracting part names from metadata
 - `compute_contact_matrix()`: Calculate part-to-part contact relationships
 - `get_contact_graph()`: Convert contact matrix to NetworkX graph
-- `visualize_contact_graph()`: Create and display graph visualization
+- `visualize_contact_graph()`: Create and display graph visualization  
 - `print_contact_summary()`: Display analysis results
+
+**Features:**
+- Automatically extracts meaningful part names from STEP file PRODUCT entities
+- Falls back to generic names (Part_0, Part_1, etc.) if extraction fails
+- Uses exact geometric distance calculation via OpenCASCADE
 
 **Parameters:**
 - `tolerance`: Distance threshold for considering parts in contact (default: 1e-6)
@@ -140,82 +106,13 @@ Main class for analyzing STEP files and computing contact matrices.
 ### Utility Functions
 
 **Contact Analysis:**
-- `analyze_contact_matrix_properties()`: Compute graph metrics and statistics
+- `analyze_contact_matrix_properties()`: Compute basic contact statistics
 - `export_contact_matrix_csv()`: Save contact matrix to CSV file
 - `load_contact_matrix_csv()`: Load contact matrix from CSV file
 
 **STEP File Handling:**
 - `validate_step_file()`: Check if file is a valid STEP format
 
-**Visualization:**
-- `get_recommended_layout()`: Suggest optimal graph layout based on size
-
-## Examples
-
-### Example 1: Mechanical Assembly Analysis
-
-```python
-# Analyze the knife assembly
-analyzer = STEPContactAnalyzer(tolerance=0.1)  # 0.1mm tolerance
-
-if analyzer.load_step_file("step_files/knife.step"):
-    # Compute contacts
-    contact_matrix = analyzer.compute_contact_matrix()
-    
-    # Get graph representation
-    G = analyzer.get_contact_graph()
-    
-    # Analyze structure
-    import networkx as nx
-    central_parts = nx.degree_centrality(G)
-    critical_connections = list(nx.bridges(G))
-    
-    print(f"Most connected part: {max(central_parts, key=central_parts.get)}")
-    print(f"Critical connections: {len(critical_connections)}")
-```
-
-### Example 2: Custom Visualization
-
-```python
-import matplotlib.pyplot as plt
-import networkx as nx
-
-# Create custom visualization
-G = analyzer.get_contact_graph()
-
-plt.figure(figsize=(15, 10))
-pos = nx.spring_layout(G, k=2, iterations=100)
-
-# Color nodes by connectivity
-node_colors = [G.degree(node) for node in G.nodes()]
-
-nx.draw_networkx_nodes(G, pos, node_color=node_colors, 
-                      node_size=1500, cmap=plt.cm.plasma)
-nx.draw_networkx_edges(G, pos, alpha=0.5, width=2)
-nx.draw_networkx_labels(G, pos, font_size=8)
-
-plt.title("Assembly Contact Network")
-plt.axis('off')
-plt.show()
-```
-
-### Example 3: Export Analysis Results
-
-```python
-from utils import export_contact_matrix_csv, analyze_contact_matrix_properties
-
-# Export contact matrix
-export_contact_matrix_csv(
-    analyzer.contact_matrix, 
-    analyzer.part_names, 
-    "assembly_contacts.csv"
-)
-
-# Analyze properties
-props = analyze_contact_matrix_properties(analyzer.contact_matrix)
-print(f"Contact density: {props['contact_density']:.2%}")
-print(f"Average connections: {props['avg_connections']:.1f}")
-```
 
 ## Understanding Contact Matrices
 
@@ -234,131 +131,61 @@ Part_B   1      1      1     # Part_B contacts Part_A and Part_C
 Part_C   0      1      1     # Part_C contacts Part_B
 ```
 
-## Graph Analysis Features
-
-The application provides several graph analysis capabilities:
-
-### Centrality Measures
-- **Degree Centrality**: Identifies most connected parts
-- **Betweenness Centrality**: Finds parts that bridge different sections
-- **Closeness Centrality**: Locates parts with shortest paths to others
-
-### Structural Analysis
-- **Bridges**: Critical connections whose removal would disconnect the assembly
-- **Connected Components**: Separate sub-assemblies within the model
-- **Clustering**: Groups of highly interconnected parts
-
-### Visualization Options
-- **Spring Layout**: Good for small to medium assemblies
-- **Kamada-Kawai**: Better for structured layouts
-- **Circular Layout**: Useful for symmetric assemblies
-- **Spectral Layout**: Effective for large, complex assemblies
-
 ## File Formats
 
 ### Supported Input Formats
-- **STEP (.step, .stp)**: Primary 3D CAD exchange format
-- **CSV**: For importing pre-computed contact matrices
+
+#### STEP Files (.step, .stp)
+Primary 3D CAD exchange format following ISO 10303 standard.
+
+#### CSV Files (.csv)
+Pre-computed contact matrices can be imported using the following format:
+
+```csv
+,Part_A,Part_B,Part_C
+Part_A,1,1,0
+Part_B,1,1,1
+Part_C,0,1,1
+```
+
+**Format Requirements:**
+- First row: Header with empty first cell, followed by part names
+- Subsequent rows: Part name in first column, followed by contact values (0 or 1)
+- Matrix must be square and symmetric
+- Diagonal elements should be 1 (self-contact)
+- Values: 1 = contact, 0 = no contact
+
+**Usage:**
+```python
+from utils import load_contact_matrix_csv
+contact_matrix, part_names = load_contact_matrix_csv("contact_matrix.csv")
+```
 
 ### Output Formats
-- **PNG/PDF**: High-resolution graph visualizations
+- **PNG**: Graph visualizations
 - **CSV**: Contact matrices for external analysis
-- **GraphML**: NetworkX graph format for advanced tools
 
-## Troubleshooting
-
-### Common Issues
-
-**1. Import Errors**
-```
-ImportError: No module named 'OCC'
-```
-- Ensure pythonocc-core is installed: `conda install -c conda-forge pythonocc-core`
-- Activate the correct conda environment
-
-**2. STEP File Loading Fails**
-```
-Failed to read STEP file
-```
-- Verify file is valid STEP format
-- Check file permissions
-- Ensure file path is correct
-
-**3. Contact Detection Issues**
-```
-No contacts detected
-```
-- Adjust tolerance parameter (try larger values like 1e-2 or 1e-1)
-- Verify parts are actually touching in the CAD model
-- Check for unit conversion issues
-
-**4. Visualization Problems**
-```
-Empty graph display
-```
-- Ensure matplotlib backend is properly configured
-- Try different graph layouts
-- Check if contact matrix has any connections
 
 ### Performance Considerations
 
 - **Large Assemblies**: Contact computation is O(n²) where n = number of parts
 - **Memory Usage**: Contact matrices require n² memory
-- **Visualization**: Large graphs (>100 nodes) may be slow to render
+- **Visualization**: Large graphs (>50 nodes) may be slow to render
 
 **Optimization Tips:**
 - Use appropriate tolerance values
 - Consider analyzing sub-assemblies separately
-- Use efficient graph layouts for large models
-
-## Advanced Usage
-
-### Custom Contact Detection
-
-```python
-class CustomContactAnalyzer(STEPContactAnalyzer):
-    def _are_parts_in_contact(self, part1, part2):
-        # Implement custom contact detection logic
-        # Example: check for overlapping bounding boxes
-        return custom_contact_check(part1, part2)
-```
-
-### Batch Processing
-
-```python
-import glob
-
-# Process multiple STEP files
-step_files = glob.glob("assemblies/*.step")
-
-results = {}
-for file_path in step_files:
-    analyzer = STEPContactAnalyzer()
-    if analyzer.load_step_file(file_path):
-        analyzer.compute_contact_matrix()
-        results[file_path] = analyzer.contact_matrix
-```
-
-### Integration with CAD Tools
-
-The application can be integrated with various CAD workflows:
-- **FreeCAD**: Use as analysis plugin
-- **Blender**: Import results for visualization
-- **SolidWorks**: Process exported STEP files
-- **Fusion 360**: Analyze assembly contact relationships
 
 ## Contributing
 
 Contributions are welcome! Areas for improvement:
-- Additional file format support (IGES, STL, etc.)
 - Advanced contact detection algorithms
-- Interactive 3D visualization
 - Performance optimizations
-- Additional graph analysis metrics
+- Additional analysis features
 
 ## License
 
-This project is open source. Please check the license file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## References
 
