@@ -1,3 +1,7 @@
+## +++ Repository moved +++
+I moved the repository to https://gitlab.com/TIBHannover/human-decision/source-code/STEP-contact-matrix-extraction, where it will be further developed.
+The Github version remains unchanged after 01.10.2025.
+
 # STEP Contact Matrix Analyzer
 
 A Python application that analyzes STEP (Standard for the Exchange of Product Data) files to create contact matrices showing which parts touch or are connected to each other, and visualizes the results as interactive graphs using NetworkX.
